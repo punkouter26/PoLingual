@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using PoLingual.Shared.Models;
+using PoLingual.Web.Hubs;
 using PoLingual.Web.Services.AI;
 using PoLingual.Web.Services.Data;
 using PoLingual.Web.Services.Factories;
@@ -11,11 +13,17 @@ namespace PoLingual.UnitTests.Services;
 public class DebateOrchestratorTests
 {
     private readonly Mock<IDebateServiceFactory> _factoryMock = new();
+    private readonly Mock<IHubContext<DebateHub>> _hubContextMock = new();
     private readonly DebateOrchestrator _sut;
 
     public DebateOrchestratorTests()
     {
-        _sut = new DebateOrchestrator(NullLogger<DebateOrchestrator>.Instance, _factoryMock.Object);
+        var mockClients = new Mock<IHubClients>();
+        var mockClientProxy = new Mock<IClientProxy>();
+        mockClients.Setup(c => c.All).Returns(mockClientProxy.Object);
+        _hubContextMock.Setup(h => h.Clients).Returns(mockClients.Object);
+
+        _sut = new DebateOrchestrator(NullLogger<DebateOrchestrator>.Instance, _factoryMock.Object, _hubContextMock.Object);
     }
 
     [Fact]

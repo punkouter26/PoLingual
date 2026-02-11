@@ -25,7 +25,16 @@
                     <RadzenColumn Size="5">
                         <RadzenFormField Text="Rapper 1" Style="width: 100%;">
                             <ChildContent>
-                                <RadzenTextBox @bind-Value="_rapper1Name" Placeholder="e.g. Eminem" Style="width: 100%;" />
+                                @if (_rappers is not null && _rappers.Count > 0)
+                                {
+                                    <RadzenDropDown @bind-Value="_rapper1Name" Data="@_rappers"
+                                                    TextProperty="Name" ValueProperty="Name"
+                                                    Placeholder="Select rapper..." Style="width: 100%;" />
+                                }
+                                else
+                                {
+                                    <RadzenTextBox @bind-Value="_rapper1Name" Placeholder="e.g. Eminem" Style="width: 100%;" />
+                                }
                             </ChildContent>
                         </RadzenFormField>
                     </RadzenColumn>
@@ -35,7 +44,16 @@
                     <RadzenColumn Size="5">
                         <RadzenFormField Text="Rapper 2" Style="width: 100%;">
                             <ChildContent>
-                                <RadzenTextBox @bind-Value="_rapper2Name" Placeholder="e.g. Jay-Z" Style="width: 100%;" />
+                                @if (_rappers is not null && _rappers.Count > 0)
+                                {
+                                    <RadzenDropDown @bind-Value="_rapper2Name" Data="@_rappers"
+                                                    TextProperty="Name" ValueProperty="Name"
+                                                    Placeholder="Select rapper..." Style="width: 100%;" />
+                                }
+                                else
+                                {
+                                    <RadzenTextBox @bind-Value="_rapper2Name" Placeholder="e.g. Jay-Z" Style="width: 100%;" />
+                                }
                             </ChildContent>
                         </RadzenFormField>
                     </RadzenColumn>
@@ -239,19 +257,20 @@
                 .WithAutomaticReconnect()
                 .Build();
 
-            _hubConnection.On<DebateState>("DebateStateUpdated", async (state) =>
+            _hubConnection.On<DebateStateDto>("DebateStateUpdated", async (state) =>
             {
                 await InvokeAsync(() =>
                 {
                     _debateInProgress = state.IsDebateInProgress;
                     _debateFinished = state.IsDebateFinished;
                     _isGeneratingTurn = state.IsGeneratingTurn;
-                    _winnerName = state.WinnerName;
-                    _judgeReasoning = state.JudgeReasoning;
+                    _winnerName = state.WinnerName ?? "";
+                    _judgeReasoning = state.JudgeReasoning ?? "";
                     _stats = state.Stats;
-                    _errorMessage = state.ErrorMessage;
+                    _errorMessage = state.ErrorMessage ?? "";
 
-                    if (!string.IsNullOrWhiteSpace(state.CurrentTurnText) &&
+                    if (state.CurrentTurnNumber > 0 &&
+                        !string.IsNullOrWhiteSpace(state.CurrentTurnText) &&
                         (_turns.Count == 0 || _turns[^1].Text != state.CurrentTurnText))
                     {
                         _turns.Add(new TurnEntry
@@ -265,17 +284,21 @@
                     StateHasChanged();
                 });
 
-                // Play audio if available
-                if (state.CurrentTurnAudio is { Length: > 0 })
+                // Play audio if available, otherwise signal completion immediately
+                if (!string.IsNullOrEmpty(state.AudioBase64))
                 {
                     try
                     {
-                        var base64 = Convert.ToBase64String(state.CurrentTurnAudio);
-                        await JS.InvokeVoidAsync("audioInterop.playAudioFromBase64", base64, "wav");
-                        if (_hubConnection is not null)
-                            await _hubConnection.InvokeAsync("AudioPlaybackComplete");
+                        await JS.InvokeVoidAsync("audioInterop.playAudioFromBase64", state.AudioBase64, "wav");
                     }
                     catch { /* Audio playback failed */ }
+                }
+
+                // Always signal audio playback complete so the orchestrator proceeds
+                if (_hubConnection is not null)
+                {
+                    try { await _hubConnection.InvokeAsync("AudioPlaybackComplete"); }
+                    catch { /* ignore */ }
                 }
             });
 
@@ -328,4 +351,24 @@
     private record RapperData(string Name, int Wins, int Losses);
     private class RapperRow { public int Rank { get; set; } public string Name { get; set; } = ""; public int Wins { get; set; } public int Losses { get; set; } public double WinRate { get; set; } }
     private class TurnEntry { public int TurnNumber { get; set; } public bool IsRapper1 { get; set; } public string Text { get; set; } = ""; }
+
+    private class DebateStateDto
+    {
+        public int CurrentTurn { get; set; }
+        public int CurrentTurnNumber { get; set; }
+        public bool IsDebateInProgress { get; set; }
+        public bool IsDebateFinished { get; set; }
+        public bool IsGeneratingTurn { get; set; }
+        public bool IsRapper1Turn { get; set; }
+        public string? CurrentTurnText { get; set; }
+        public string? WinnerName { get; set; }
+        public string? JudgeReasoning { get; set; }
+        public string? ErrorMessage { get; set; }
+        public string? Rapper1Name { get; set; }
+        public string? Rapper2Name { get; set; }
+        public string? TopicTitle { get; set; }
+        public bool HasAudio { get; set; }
+        public string? AudioBase64 { get; set; }
+        public DebateStats? Stats { get; set; }
+    }
 }

@@ -4,24 +4,36 @@ param location string
 @description('Environment name')
 param environmentName string
 
-// ── Shared App Service Plan (Linux, Free F1) ─────────────────────────────────
-resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
-  name: 'asp-polingual-${environmentName}'
-  location: location
-  kind: 'linux'
-  sku: {
-    name: 'F1'
-    tier: 'Free'
-  }
-  properties: {
-    reserved: true
-  }
+@description('Name of the existing App Service Plan in poshared resource group')
+param existingAppServicePlanName string = 'asp-poshared-linux'
+
+@description('Resource group of the shared resources')
+param sharedResourceGroupName string = 'poshared'
+
+@description('Name of the existing Log Analytics Workspace in poshared')
+param existingLogAnalyticsName string = 'log-poshared'
+
+@description('Name of the existing Application Insights in poshared')
+param existingAppInsightsName string = 'appi-poshared'
+
+// ── Reference existing shared resources from poshared resource group ─────────
+resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' existing = {
+  name: existingAppServicePlanName
+  scope: resourceGroup(sharedResourceGroupName)
 }
 
-// ── Web App ──────────────────────────────────────────────────────────────────
+resource sharedAppInsights 'Microsoft.Insights/components@2020-02-02' existing = {
+  name: existingAppInsightsName
+  scope: resourceGroup(sharedResourceGroupName)
+}
+
+// ── Web App (app-specific) ───────────────────────────────────────────────────
 resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   name: 'app-polingual-${environmentName}'
   location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
@@ -41,12 +53,16 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
           name: 'Azure__TableStorageConnectionString'
           value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
         }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: sharedAppInsights.properties.ConnectionString
+        }
       ]
     }
   }
 }
 
-// ── Storage Account (Table Storage) ──────────────────────────────────────────
+// ── Storage Account (Table Storage — app-specific) ───────────────────────────
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: 'stpolingual${environmentName}'
   location: location
@@ -65,28 +81,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 resource tableServices 'Microsoft.Storage/storageAccounts/tableServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
-}
-
-// ── Application Insights ─────────────────────────────────────────────────────
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
-  name: 'log-polingual-${environmentName}'
-  location: location
-  properties: {
-    sku: {
-      name: 'PerGB2018'
-    }
-    retentionInDays: 30
-  }
-}
-
-resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: 'appi-polingual-${environmentName}'
-  location: location
-  kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    WorkspaceResourceId: logAnalytics.id
-  }
 }
 
 output webAppName string = webApp.name

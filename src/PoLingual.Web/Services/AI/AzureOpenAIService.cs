@@ -55,7 +55,7 @@ public class AzureOpenAIService : IAzureOpenAIService
             {
                 var messages = new List<ChatMessage>
                 {
-                    new SystemChatMessage("You are a rap battle AI. Generate creative, clean, and impactful rap lyrics. Keep responses concise."),
+                    new SystemChatMessage("You are a rap battle AI. Generate creative, clean, and impactful rap lyrics. Each verse MUST be 8 lines or fewer. Never exceed 8 lines. Keep it tight and punchy."),
                     new UserChatMessage(prompt)
                 };
 

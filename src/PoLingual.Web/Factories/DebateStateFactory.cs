@@ -20,7 +20,8 @@ public static class DebateStateFactory
 
     public static DebateState CreateForNewDebate(Rapper rapper1, Rapper rapper2, Topic topic, int maxTurns)
     {
-        string introText = $"Let the debate begin! {rapper1.Name} vs {rapper2.Name} on '{topic.Title}'. {maxTurns} rounds. Let's go!";
+        int totalRounds = maxTurns / 2;
+        string introText = $"Let the battle begin! {rapper1.Name} vs {rapper2.Name} on '{topic.Title}'. {totalRounds} rounds. Let's go!";
         return new DebateState
         {
             Rapper1 = rapper1,

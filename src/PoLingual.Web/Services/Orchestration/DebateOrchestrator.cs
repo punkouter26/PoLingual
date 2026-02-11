@@ -1,37 +1,41 @@
 using PoLingual.Shared.Models;
 using PoLingual.Web.Factories;
+using PoLingual.Web.Hubs;
 using PoLingual.Web.Services.AI;
 using PoLingual.Web.Services.Speech;
 using PoLingual.Web.Services.Data;
 using PoLingual.Web.Services.Factories;
+using Microsoft.AspNetCore.SignalR;
 using System.Text;
 
 namespace PoLingual.Web.Services.Orchestration;
 
 /// <summary>
 /// Orchestrates the full lifecycle of a rap debate.
-/// Uses Factory pattern for scoped service creation and Observer pattern for state notifications.
+/// Uses IHubContext for SignalR state broadcasting and Factory pattern for scoped service creation.
 /// </summary>
 public class DebateOrchestrator : IDebateOrchestrator
 {
     private readonly ILogger<DebateOrchestrator> _logger;
     private readonly IDebateServiceFactory _serviceFactory;
+    private readonly IHubContext<DebateHub> _hubContext;
     private DebateState _currentState;
     public DebateState CurrentState => _currentState;
-    public event Func<DebateState, Task> OnStateChangeAsync = null!;
 
     private CancellationTokenSource? _debateCancellationTokenSource;
     private TaskCompletionSource<bool> _audioPlaybackCompletionSource;
 
     private const int MaxDebateTurns = 6;
-    private const int MaxTokensPerTurn = 200;
+    private const int MaxTokensPerTurn = 150;
     private const string Rapper1Voice = "en-US-GuyNeural";
     private const string Rapper2Voice = "en-US-JennyNeural";
+    private static readonly TimeSpan AudioPlaybackTimeout = TimeSpan.FromSeconds(60);
 
-    public DebateOrchestrator(ILogger<DebateOrchestrator> logger, IDebateServiceFactory serviceFactory)
+    public DebateOrchestrator(ILogger<DebateOrchestrator> logger, IDebateServiceFactory serviceFactory, IHubContext<DebateHub> hubContext)
     {
         _logger = logger;
         _serviceFactory = serviceFactory;
+        _hubContext = hubContext;
         _currentState = DebateStateFactory.CreateEmpty();
         _audioPlaybackCompletionSource = new TaskCompletionSource<bool>();
     }
@@ -91,9 +95,12 @@ public class DebateOrchestrator : IDebateOrchestrator
                 string opponent = _currentState.IsRapper1Turn ? _currentState.Rapper2.Name : _currentState.Rapper1.Name;
                 string role = _currentState.IsRapper1Turn ? "Pro" : "Con";
 
-                string prompt = $"You are {currentRapper} debating {opponent} on '{_currentState.Topic.Title}'. " +
-                                $"Role: {role}. Turn {_currentState.CurrentTurn}/{MaxDebateTurns}. " +
-                                $"Transcript:\n{_currentState.DebateTranscript}\nYour rap:";
+                int round = (_currentState.CurrentTurn + 1) / 2;
+                int totalRounds = MaxDebateTurns / 2;
+                string prompt = $"You are {currentRapper} in a rap battle against {opponent} on '{_currentState.Topic.Title}'. " +
+                                $"Role: {role}. Round {round}/{totalRounds}. " +
+                                $"IMPORTANT: Your verse MUST be exactly 8 lines or fewer. Do not exceed 8 lines. " +
+                                $"Transcript so far:\n{_currentState.DebateTranscript}\nYour rap verse (max 8 lines):";
 
                 try
                 {
@@ -118,7 +125,16 @@ public class DebateOrchestrator : IDebateOrchestrator
                 }
 
                 await NotifyStateChangeAsync();
-                await _audioPlaybackCompletionSource.Task;
+
+                // Wait for audio playback with timeout — don't hang if client doesn't respond
+                bool hasAudio = _currentState.CurrentTurnAudio is { Length: > 0 };
+                if (hasAudio)
+                {
+                    var completed = await Task.WhenAny(_audioPlaybackCompletionSource.Task, Task.Delay(AudioPlaybackTimeout, cancellationToken));
+                    if (completed != _audioPlaybackCompletionSource.Task)
+                        _logger.LogWarning("Audio playback timed out for turn {Turn}, continuing.", _currentState.CurrentTurn);
+                }
+
                 _audioPlaybackCompletionSource = new TaskCompletionSource<bool>();
                 _currentState.IsRapper1Turn = !_currentState.IsRapper1Turn;
             }
@@ -172,7 +188,28 @@ public class DebateOrchestrator : IDebateOrchestrator
 
     private async Task NotifyStateChangeAsync()
     {
-        try { if (OnStateChangeAsync != null) await OnStateChangeAsync.Invoke(_currentState); }
-        catch (Exception ex) { _logger.LogError(ex, "Error notifying state change."); }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("DebateStateUpdated", new
+            {
+                _currentState.CurrentTurn,
+                _currentState.IsDebateInProgress,
+                _currentState.IsDebateFinished,
+                _currentState.IsGeneratingTurn,
+                _currentState.IsRapper1Turn,
+                _currentState.CurrentTurnText,
+                CurrentTurnNumber = _currentState.CurrentTurn,
+                _currentState.WinnerName,
+                _currentState.JudgeReasoning,
+                _currentState.ErrorMessage,
+                Rapper1Name = _currentState.Rapper1.Name,
+                Rapper2Name = _currentState.Rapper2.Name,
+                TopicTitle = _currentState.Topic.Title,
+                HasAudio = _currentState.CurrentTurnAudio is { Length: > 0 },
+                AudioBase64 = _currentState.CurrentTurnAudio is { Length: > 0 } ? Convert.ToBase64String(_currentState.CurrentTurnAudio) : null,
+                _currentState.Stats
+            });
+        }
+        catch (Exception ex) { _logger.LogError(ex, "Error sending state update via SignalR."); }
     }
 }

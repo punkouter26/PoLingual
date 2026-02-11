@@ -7,6 +7,7 @@ namespace PoLingual.Web.Hubs;
 /// <summary>
 /// SignalR hub for real-time debate state streaming.
 /// Provides methods for starting debates and signaling audio playback completion.
+/// State broadcasting is handled by the orchestrator via IHubContext.
 /// </summary>
 public class DebateHub : Hub
 {
@@ -22,14 +23,12 @@ public class DebateHub : Hub
     public override async Task OnConnectedAsync()
     {
         _logger.LogInformation("Client connected: {ConnectionId}", Context.ConnectionId);
-        _orchestrator.OnStateChangeAsync += NotifyStateChangeAsync;
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         _logger.LogInformation("Client disconnected: {ConnectionId}", Context.ConnectionId);
-        _orchestrator.OnStateChangeAsync -= NotifyStateChangeAsync;
         await base.OnDisconnectedAsync(exception);
     }
 
@@ -50,33 +49,5 @@ public class DebateHub : Hub
     public void ResetDebate()
     {
         _orchestrator.ResetDebate();
-    }
-
-    private async Task NotifyStateChangeAsync(DebateState state)
-    {
-        try
-        {
-            await Clients.All.SendAsync("DebateStateUpdated", new
-            {
-                state.CurrentTurn,
-                state.IsDebateInProgress,
-                state.IsDebateFinished,
-                state.IsGeneratingTurn,
-                state.IsRapper1Turn,
-                state.CurrentTurnText,
-                state.WinnerName,
-                state.JudgeReasoning,
-                state.ErrorMessage,
-                Rapper1Name = state.Rapper1.Name,
-                Rapper2Name = state.Rapper2.Name,
-                TopicTitle = state.Topic.Title,
-                HasAudio = state.CurrentTurnAudio is { Length: > 0 },
-                AudioBase64 = state.CurrentTurnAudio is { Length: > 0 } ? Convert.ToBase64String(state.CurrentTurnAudio) : null
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error sending state update via SignalR.");
-        }
     }
 }
