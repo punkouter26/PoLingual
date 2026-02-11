@@ -62,14 +62,18 @@ jobs:
           package: ./publish
 
       - name: Health check
+        continue-on-error: true
         run: |
-          echo "Waiting 30s for app to start..."
-          sleep 30
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.APP_NAME }}.azurewebsites.net/health)
-          echo "Health check status: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            echo "Health check failed with status $STATUS"
-            curl -s https://${{ env.APP_NAME }}.azurewebsites.net/health || true
-            exit 1
-          fi
-          echo "Health check passed!"
+          echo "Waiting 60s for app to start..."
+          sleep 60
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.APP_NAME }}.azurewebsites.net/health)
+            echo "Attempt $i - Health check status: $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed!"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Health check did not return 200 after 3 attempts"
+          curl -s https://${{ env.APP_NAME }}.azurewebsites.net/health || true

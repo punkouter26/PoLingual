@@ -1,0 +1,9 @@
+<step title="Incoming Request" date="2026-02-11T20:03:42.187" instance="97aa17" url="/api/deployments/latest?deployer=OneDeploy&amp;time=2026-02-11_20-03-23Z" method="GET" type="request" pid="832,1,15" Host="app-polingual.scm.azurewebsites.net" User-Agent="GITHUBACTIONS_DeployWebAppToAzure_0632014fcfad31721c4b3df6ed340e8013d6e5466181ef5c314e57f74b3d2cf9" Authorization="Bea..." Content-Type="application/json; charset=utf-8" Cookie="ARRAffinity=97aa17d1b134306e3cea6cb1aabfcd9e65e71ad7a092c69496ca6600a475dff3;Path=/;HttpOnly;Secure;Domain=app-polingual.scm.azurewebsites.net; ARRAffinitySameSite=97aa17d1b134306e3cea6cb1aabfcd9e65e71ad7a092c69496ca6600a475dff3;Path=/;HttpOnly;SameSite=None;Secure;Domain=app-polingual.scm.azurewebsites.net" Content-Length="0" X-ARR-LOG-ID="730c73d0-03b0-4ce2-bb3f-b657fb4a112c" CLIENT-IP="172.215.210.227:5153" X-SITE-DEPLOYMENT-ID="app-polingual" WAS-DEFAULT-HOSTNAME="app-polingual.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/deployments/latest?deployer=OneDeploy&amp;time=2026-02-11_20-03-23Z" X-Client-IP="172.215.210.227" X-Client-Port="5153" >
+  <step title="Cleanup Xml Logs" date="2026-02-11T20:03:42.191" /><!-- duration: 52ms -->
+  <step title="DeploymentService.GetResult" date="2026-02-11T20:03:42.303" >
+    <step title="DeploymentService.GetLatestDeployment" date="2026-02-11T20:03:42.392" >
+      <step title="DeploymentManager.GetResults" date="2026-02-11T20:03:42.406" /><!-- duration: 615ms -->
+    </step><!-- duration: 690ms -->
+  </step><!-- duration: 842ms -->
+  <step title="Outgoing response" date="2026-02-11T20:03:43.209" type="response" statusCode="202" statusText="Accepted" /><!-- duration: 205ms -->
+</step><!-- duration: 1236ms -->
