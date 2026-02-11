@@ -4,22 +4,21 @@ param location string
 @description('Environment name')
 param environmentName string
 
-@description('Name of the existing App Service Plan in poshared resource group')
-param existingAppServicePlanName string = 'asp-poshared-linux'
+@description('Name of the existing App Service Plan in PoLingual resource group')
+param existingAppServicePlanName string = 'asp-polingual'
 
 @description('Resource group of the shared resources')
 param sharedResourceGroupName string = 'poshared'
 
 @description('Name of the existing Log Analytics Workspace in poshared')
-param existingLogAnalyticsName string = 'log-poshared'
+param existingLogAnalyticsName string = 'PoShared-LogAnalytics'
 
 @description('Name of the existing Application Insights in poshared')
-param existingAppInsightsName string = 'appi-poshared'
+param existingAppInsightsName string = 'poappideinsights8f9c9a4e'
 
 // ── Reference existing shared resources from poshared resource group ─────────
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' existing = {
   name: existingAppServicePlanName
-  scope: resourceGroup(sharedResourceGroupName)
 }
 
 resource sharedAppInsights 'Microsoft.Insights/components@2020-02-02' existing = {
@@ -29,7 +28,7 @@ resource sharedAppInsights 'Microsoft.Insights/components@2020-02-02' existing =
 
 // ── Web App (app-specific) ───────────────────────────────────────────────────
 resource webApp 'Microsoft.Web/sites@2022-03-01' = {
-  name: 'app-polingual-${environmentName}'
+  name: 'app-polingual'
   location: location
   identity: {
     type: 'SystemAssigned'
@@ -64,7 +63,7 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
 
 // ── Storage Account (Table Storage — app-specific) ───────────────────────────
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
-  name: 'stpolingual${environmentName}'
+  name: 'stpolingual26'
   location: location
   sku: {
     name: 'Standard_LRS'
