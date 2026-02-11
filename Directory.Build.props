@@ -1,0 +1,21 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Suppress overly strict warnings that impede development -->
+    <NoWarn>$(NoWarn);NU1902;NU1903;NU1904;ASPDEPR002;NETSDK1228;CA1848;CA1305;CA1711;CA1001;CA1873;CA1716</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>PoLingual Team</Authors>
+    <Company>PoLingual</Company>
+    <Product>PoLingual</Product>
+  </PropertyGroup>
+</Project>

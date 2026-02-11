@@ -1,0 +1,331 @@
+@page "/rap-debate"
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@rendermode InteractiveWebAssembly
+@implements IAsyncDisposable
+
+<PageTitle>PoLingual — Rap Battle Arena</PageTitle>
+
+<div class="rap-page">
+    <div class="rap-header">
+        <RadzenLink Path="/" Text="← Back to Playground" Style="color: rgba(255,255,255,0.7); font-size: 0.9rem;" />
+        <h2 class="rap-title">🎙️ Rap Battle Arena</h2>
+    </div>
+
+    @if (!_debateInProgress && !_debateFinished)
+    {
+        <RadzenCard class="setup-card">
+            <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Set Up Your Battle</RadzenText>
+
+            <RadzenStack Gap="1.5rem">
+                <RadzenRow Gap="1rem" AlignItems="AlignItems.End">
+                    <RadzenColumn Size="5">
+                        <RadzenFormField Text="Rapper 1" Style="width: 100%;">
+                            <ChildContent>
+                                <RadzenTextBox @bind-Value="_rapper1Name" Placeholder="e.g. Eminem" Style="width: 100%;" />
+                            </ChildContent>
+                        </RadzenFormField>
+                    </RadzenColumn>
+                    <RadzenColumn Size="2">
+                        <div style="text-align: center; font-size: 1.5rem; font-weight: bold; color: #e53935;">VS</div>
+                    </RadzenColumn>
+                    <RadzenColumn Size="5">
+                        <RadzenFormField Text="Rapper 2" Style="width: 100%;">
+                            <ChildContent>
+                                <RadzenTextBox @bind-Value="_rapper2Name" Placeholder="e.g. Jay-Z" Style="width: 100%;" />
+                            </ChildContent>
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenFormField Text="Battle Topic" Style="width: 100%;">
+                    <ChildContent>
+                        @if (_topics is not null && _topics.Count > 0)
+                        {
+                            <RadzenDropDown @bind-Value="_selectedTopic" Data="@_topics"
+                                            TextProperty="Title" ValueProperty="Title"
+                                            Placeholder="Pick a topic..." Style="width: 100%;" />
+                        }
+                        else
+                        {
+                            <RadzenTextBox @bind-Value="_selectedTopic" Placeholder="Enter a battle topic..." Style="width: 100%;" />
+                        }
+                    </ChildContent>
+                </RadzenFormField>
+
+                <RadzenButton Text="🔥 Start Battle" Icon="play_arrow" ButtonStyle="ButtonStyle.Danger"
+                              Size="ButtonSize.Large" Click="@StartDebateAsync"
+                              Disabled="@(string.IsNullOrWhiteSpace(_rapper1Name) || string.IsNullOrWhiteSpace(_rapper2Name) || string.IsNullOrWhiteSpace(_selectedTopic) || _isConnecting)"
+                              IsBusy="@_isConnecting" Style="width: 100%;" />
+            </RadzenStack>
+        </RadzenCard>
+
+        @* Leaderboard below setup *@
+        <RadzenCard class="leaderboard-card">
+            <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">🏆 Leaderboard</RadzenText>
+            @if (_leaderboardLoading)
+            {
+                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Medium" />
+            }
+            else if (_rappers is not null && _rappers.Count > 0)
+            {
+                <RadzenDataGrid Data="@_rappers" TItem="RapperRow" AllowSorting="true" AllowPaging="true" PageSize="8"
+                                Style="width: 100%;" Density="Density.Compact">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="RapperRow" Property="Rank" Title="#" Width="50px" />
+                        <RadzenDataGridColumn TItem="RapperRow" Property="Name" Title="Rapper" />
+                        <RadzenDataGridColumn TItem="RapperRow" Property="Wins" Title="W" Width="60px" />
+                        <RadzenDataGridColumn TItem="RapperRow" Property="Losses" Title="L" Width="60px" />
+                        <RadzenDataGridColumn TItem="RapperRow" Property="WinRate" Title="Win %" Width="80px" FormatString="{0:P0}" />
+                    </Columns>
+                </RadzenDataGrid>
+            }
+            else
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" Size="AlertSize.Small">
+                    No battles yet. Be the first to start one!
+                </RadzenAlert>
+            }
+        </RadzenCard>
+    }
+
+    @if (_debateInProgress || _debateFinished)
+    {
+        <div class="battle-arena">
+            <div class="battle-header">
+                <span class="rapper-name rapper1-name">@_rapper1Name</span>
+                <span class="vs-badge">VS</span>
+                <span class="rapper-name rapper2-name">@_rapper2Name</span>
+            </div>
+            <div class="battle-topic">Topic: @_selectedTopic</div>
+
+            @if (_isGeneratingTurn)
+            {
+                <div class="generating-indicator">
+                    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+                    <span>Generating verse...</span>
+                </div>
+            }
+
+            <div class="battle-transcript">
+                @foreach (var turn in _turns)
+                {
+                    <div class="debate-turn @(turn.IsRapper1 ? "rapper1-turn" : "rapper2-turn")">
+                        <div class="turn-header">
+                            <strong>@(turn.IsRapper1 ? _rapper1Name : _rapper2Name)</strong>
+                            <span class="turn-number">Round @turn.TurnNumber</span>
+                        </div>
+                        <div class="turn-text">@turn.Text</div>
+                    </div>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" class="rz-mt-3">
+                    @_errorMessage
+                </RadzenAlert>
+            }
+
+            @if (_debateFinished)
+            {
+                <RadzenCard class="judge-card">
+                    <RadzenText TextStyle="TextStyle.H5">🏆 Winner: @_winnerName</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body1" Style="white-space: pre-wrap;" class="rz-mt-2">@_judgeReasoning</RadzenText>
+
+                    @if (_stats is not null)
+                    {
+                        <RadzenRow Gap="1rem" class="rz-mt-4">
+                            <RadzenColumn Size="6">
+                                <div class="score-card">
+                                    <h6>@_rapper1Name</h6>
+                                    <div class="score-item">Logic: <strong>@_stats.Rapper1LogicScore</strong></div>
+                                    <div class="score-item">Flow: <strong>@_stats.Rapper1SentimentScore</strong></div>
+                                    <div class="score-item">Topic: <strong>@_stats.Rapper1AdherenceScore</strong></div>
+                                    <div class="score-item">Rebuttal: <strong>@_stats.Rapper1RebuttalScore</strong></div>
+                                    <div class="score-total">Total: <strong>@_stats.Rapper1TotalScore</strong></div>
+                                </div>
+                            </RadzenColumn>
+                            <RadzenColumn Size="6">
+                                <div class="score-card">
+                                    <h6>@_rapper2Name</h6>
+                                    <div class="score-item">Logic: <strong>@_stats.Rapper2LogicScore</strong></div>
+                                    <div class="score-item">Flow: <strong>@_stats.Rapper2SentimentScore</strong></div>
+                                    <div class="score-item">Topic: <strong>@_stats.Rapper2AdherenceScore</strong></div>
+                                    <div class="score-item">Rebuttal: <strong>@_stats.Rapper2RebuttalScore</strong></div>
+                                    <div class="score-total">Total: <strong>@_stats.Rapper2TotalScore</strong></div>
+                                </div>
+                            </RadzenColumn>
+                        </RadzenRow>
+                    }
+
+                    <RadzenButton Text="New Battle" Icon="replay" ButtonStyle="ButtonStyle.Primary"
+                                  Click="@ResetDebate" class="rz-mt-4" Style="width: 100%;" />
+                </RadzenCard>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private HubConnection? _hubConnection;
+    private string _rapper1Name = "";
+    private string _rapper2Name = "";
+    private string? _selectedTopic;
+    private string _errorMessage = "";
+    private string _winnerName = "";
+    private string _judgeReasoning = "";
+    private bool _debateInProgress;
+    private bool _debateFinished;
+    private bool _isGeneratingTurn;
+    private bool _isConnecting;
+    private bool _leaderboardLoading = true;
+    private List<TopicItem>? _topics;
+    private List<RapperRow>? _rappers;
+    private DebateStats? _stats;
+    private readonly List<TurnEntry> _turns = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load topics and leaderboard in parallel
+        var topicsTask = LoadTopicsAsync();
+        var leaderboardTask = LoadLeaderboardAsync();
+        await Task.WhenAll(topicsTask, leaderboardTask);
+    }
+
+    private async Task LoadTopicsAsync()
+    {
+        try { _topics = await Http.GetFromJsonAsync<List<TopicItem>>("/api/topics"); }
+        catch { /* Topics unavailable */ }
+    }
+
+    private async Task LoadLeaderboardAsync()
+    {
+        try
+        {
+            var data = await Http.GetFromJsonAsync<List<RapperData>>("/api/rappers");
+            if (data is not null)
+            {
+                _rappers = data
+                    .OrderByDescending(r => r.Wins)
+                    .ThenBy(r => r.Losses)
+                    .Select((r, i) => new RapperRow
+                    {
+                        Rank = i + 1,
+                        Name = r.Name,
+                        Wins = r.Wins,
+                        Losses = r.Losses,
+                        WinRate = r.Wins + r.Losses > 0 ? (double)r.Wins / (r.Wins + r.Losses) : 0
+                    }).ToList();
+            }
+        }
+        catch { _rappers = []; }
+        finally { _leaderboardLoading = false; }
+    }
+
+    private async Task StartDebateAsync()
+    {
+        _isConnecting = true;
+        _errorMessage = "";
+        _turns.Clear();
+
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/debatehub"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On<DebateState>("DebateStateUpdated", async (state) =>
+            {
+                await InvokeAsync(() =>
+                {
+                    _debateInProgress = state.IsDebateInProgress;
+                    _debateFinished = state.IsDebateFinished;
+                    _isGeneratingTurn = state.IsGeneratingTurn;
+                    _winnerName = state.WinnerName;
+                    _judgeReasoning = state.JudgeReasoning;
+                    _stats = state.Stats;
+                    _errorMessage = state.ErrorMessage;
+
+                    if (!string.IsNullOrWhiteSpace(state.CurrentTurnText) &&
+                        (_turns.Count == 0 || _turns[^1].Text != state.CurrentTurnText))
+                    {
+                        _turns.Add(new TurnEntry
+                        {
+                            TurnNumber = state.CurrentTurnNumber,
+                            IsRapper1 = state.IsRapper1Turn,
+                            Text = state.CurrentTurnText
+                        });
+                    }
+
+                    StateHasChanged();
+                });
+
+                // Play audio if available
+                if (state.CurrentTurnAudio is { Length: > 0 })
+                {
+                    try
+                    {
+                        var base64 = Convert.ToBase64String(state.CurrentTurnAudio);
+                        await JS.InvokeVoidAsync("audioInterop.playAudioFromBase64", base64, "wav");
+                        if (_hubConnection is not null)
+                            await _hubConnection.InvokeAsync("AudioPlaybackComplete");
+                    }
+                    catch { /* Audio playback failed */ }
+                }
+            });
+
+            await _hubConnection.StartAsync();
+            await _hubConnection.InvokeAsync("StartDebate", _rapper1Name, _rapper2Name, _selectedTopic);
+            _debateInProgress = true;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to connect: {ex.Message}";
+        }
+        finally
+        {
+            _isConnecting = false;
+        }
+    }
+
+    private async Task ResetDebate()
+    {
+        _debateInProgress = false;
+        _debateFinished = false;
+        _isGeneratingTurn = false;
+        _turns.Clear();
+        _winnerName = "";
+        _judgeReasoning = "";
+        _stats = null;
+        _errorMessage = "";
+
+        if (_hubConnection is not null)
+        {
+            try { await _hubConnection.InvokeAsync("ResetDebate"); }
+            catch { /* ignore */ }
+            await _hubConnection.DisposeAsync();
+            _hubConnection = null;
+        }
+
+        await LoadLeaderboardAsync();
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+
+    private record TopicItem(string Title, string Category, string Description);
+    private record RapperData(string Name, int Wins, int Losses);
+    private class RapperRow { public int Rank { get; set; } public string Name { get; set; } = ""; public int Wins { get; set; } public int Losses { get; set; } public double WinRate { get; set; } }
+    private class TurnEntry { public int TurnNumber { get; set; } public bool IsRapper1 { get; set; } public string Text { get; set; } = ""; }
+}

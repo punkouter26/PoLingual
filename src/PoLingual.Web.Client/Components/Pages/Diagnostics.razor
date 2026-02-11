@@ -1,0 +1,70 @@
+@page "/diag"
+@using System.Net.Http.Json
+@inject HttpClient Http
+@rendermode InteractiveWebAssembly
+
+<PageTitle>PoLingual — Diagnostics</PageTitle>
+
+<div style="max-width: 900px; margin: 0 auto;">
+    <div style="padding: 1rem 0 1.5rem;">
+        <RadzenLink Path="/" Text="← Back to Playground" Style="color: rgba(255,255,255,0.7); font-size: 0.9rem;" />
+        <h2 style="font-size: 1.8rem; font-weight: 700; color: #b0bec5; margin: 0.5rem 0 0;">🔧 Diagnostics</h2>
+    </div>
+
+    <RadzenButton Text="Run All Checks" Icon="play_arrow" Click="@RunDiagnosticsAsync"              ButtonStyle="ButtonStyle.Primary"
+                  IsBusy="@_loading" class="rz-mb-4" />
+
+    @if (_loading)
+    {
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    }
+    else if (_results is not null)
+    {
+        <RadzenCard class="rz-mb-4">
+            <RadzenText TextStyle="TextStyle.H6">
+                Summary: @_results.Count(r => r.Success) / @_results.Count passed
+            </RadzenText>
+        </RadzenCard>
+
+        <RadzenDataGrid Data="@_results" TItem="DiagResult" AllowSorting="true" Style="max-width: 900px;">
+            <Columns>
+                <RadzenDataGridColumn TItem="DiagResult" Property="CheckName" Title="Check" Width="250px" />
+                <RadzenDataGridColumn TItem="DiagResult" Property="Success" Title="Status" Width="100px">
+                    <Template Context="item">
+                        <RadzenBadge BadgeStyle="@(item.Success? BadgeStyle.Success: BadgeStyle.Danger)"
+                                     Text="@(item.Success ? "✅ Pass" : "❌ Fail")" />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="DiagResult" Property="Message" Title="Details" />
+            </Columns>
+        </RadzenDataGrid>
+    }
+</div>
+
+@code {
+    private List<DiagResult>? _results;
+    private bool _loading;
+
+    protected override async Task OnInitializedAsync() => await RunDiagnosticsAsync();
+
+    private async Task RunDiagnosticsAsync()
+    {
+        _loading = true;
+        try
+        {
+            _results = await Http.GetFromJsonAsync<List<DiagResult>>("/api/diagnostics");
+        }
+        catch (Exception ex)
+        {
+            _results = [new DiagResult { CheckName = "HTTP Request", Success = false, Message = $"Failed: {ex.Message}" }];
+        }
+        finally { _loading = false; }
+    }
+
+    private class DiagResult
+    {
+        public string CheckName { get; set; } = "";
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
+    }
+}

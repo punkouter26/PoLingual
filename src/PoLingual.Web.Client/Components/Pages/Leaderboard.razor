@@ -1,0 +1,12 @@
+@page "/leaderboard"
+@inject NavigationManager Navigation
+@rendermode InteractiveWebAssembly
+
+@* Leaderboard is now integrated into the Rap Battle Arena page *@
+
+@code {
+    protected override void OnInitialized()
+    {
+        Navigation.NavigateTo("/rap-debate", replace: true);
+    }
+}

@@ -1,0 +1,28 @@
+# Azure Developer CLI (azd) configuration
+# Deploy with: azd up
+
+name: polingual
+
+metadata:
+  template: azd-starter
+
+infra:
+  provider: bicep
+  path: infra
+
+services:
+  web:
+    project: ./src/PoLingual.Web
+    language: dotnet
+    host: appservice
+
+azure:
+  resourceGroup: PoLingual
+
+hooks:
+  preprovision:
+    shell: pwsh
+    run: |
+      Write-Host "Using subscription: Punkouter26 (bbb8dfbe-9169-432f-9b7a-fbf861b51037)"
+      Write-Host "Resource group: PoLingual"
+      Write-Host "Shared resources from: PoShared"

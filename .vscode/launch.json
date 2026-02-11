@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "PoLingual.Web (Server)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-server",
+      "program": "${workspaceFolder}/src/PoLingual.Web/bin/Debug/net10.0/PoLingual.Web.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/PoLingual.Web",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "https://localhost:7083;http://localhost:5083"
+      },
+      "sourceFileMap": {
+        "/Views": "${workspaceFolder}/Views"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "PoLingual.Web.Client (Blazor WASM)",
+      "type": "blazorwasm",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/src/PoLingual.Web.Client",
+      "browser": "edge"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "PoLingual (Full Stack)",
+      "configurations": [
+        "PoLingual.Web (Server)",
+        "PoLingual.Web.Client (Blazor WASM)"
+      ],
+      "preLaunchTask": "cleanup-dotnet-processes",
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "PoLingual",
+        "order": 1
+      }
+    }
+  ]
+}

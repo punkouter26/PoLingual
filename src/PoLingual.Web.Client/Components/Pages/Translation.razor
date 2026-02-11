@@ -1,0 +1,151 @@
+@page "/victorian-translator"
+@page "/translate"
+@page "/translation"
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@rendermode InteractiveWebAssembly
+
+<PageTitle>PoLingual — Victorian Translator</PageTitle>
+
+<div class="victorian-page">
+    <div class="victorian-header">
+        <RadzenLink Path="/" Text="← Back to Playground" Style="color: rgba(255,255,255,0.7); font-size: 0.9rem;" />
+        <h2 class="victorian-title">🎩 Victorian English Translator</h2>
+    </div>
+
+    <RadzenCard class="rz-mb-4" Style="max-width: 900px;">
+        <RadzenStack Gap="1rem">
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End">
+                <RadzenButton Text="Random Lyrics" Icon="shuffle" Click="@LoadRandomLyrics"
+                              ButtonStyle="ButtonStyle.Secondary" Disabled="@_isTranslating" />
+                @if (_availableSongs is not null)
+                {
+                    <RadzenDropDown @bind-Value="@_selectedSong" Data="@_availableSongs" Placeholder="Pick a song..."
+                                    Style="width: 300px;" Change="@OnSongSelected" Disabled="@_isTranslating" />
+                }
+            </RadzenStack>
+
+            <RadzenTextArea @bind-Value="@_inputText" Rows="6" Placeholder="Enter modern English text to translate..."
+                            Style="width: 100%;" Disabled="@_isTranslating" />
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
+                <RadzenButton Text="Translate to Victorian" Icon="translate" Click="@TranslateAsync"
+                              ButtonStyle="ButtonStyle.Primary" IsBusy="@_isTranslating"
+                              Disabled="@(string.IsNullOrWhiteSpace(_inputText) || _isTranslating)" />
+                @if (_translationTimeMs > 0)
+                {
+                    <RadzenText TextStyle="TextStyle.Caption">Translated in @_translationTimeMs ms</RadzenText>
+                }
+            </RadzenStack>
+
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter">
+                    @_errorMessage
+                </RadzenAlert>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(_translatedText))
+            {
+                <RadzenCard Variant="Variant.Outlined">
+                    <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-mb-2">📜 Victorian Translation:</RadzenText>
+                    <RadzenText Style="white-space: pre-wrap; font-style: italic;">@_translatedText</RadzenText>
+                </RadzenCard>
+
+                <RadzenButton Text="🔊 Listen" Icon="volume_up" Click="@SynthesizeSpeechAsync"
+                              ButtonStyle="ButtonStyle.Info"                          IsBusy="@_isSynthesizing" Disabled="@_isSynthesizing" />
+            }
+        </RadzenStack>
+    </RadzenCard>
+</div>
+
+@code {
+    private string _inputText = "";
+    private string _translatedText = "";
+    private string _errorMessage = "";
+    private string? _selectedSong;
+    private List<string>? _availableSongs;
+    private bool _isTranslating;
+    private bool _isSynthesizing;
+    private long _translationTimeMs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _availableSongs = await Http.GetFromJsonAsync<List<string>>("/api/lyrics/songs"); }
+        catch { /* Songs unavailable */ }
+    }
+
+    private async Task OnSongSelected(object value)
+    {
+        if (value is string song && !string.IsNullOrWhiteSpace(song))
+        {
+            try
+            {
+                var result = await Http.GetFromJsonAsync<LyricsResult>($"/api/lyrics/{Uri.EscapeDataString(song)}");
+                if (result?.Lyrics is not null) _inputText = result.Lyrics;
+            }
+            catch { _errorMessage = "Failed to load song lyrics."; }
+        }
+    }
+
+    private async Task LoadRandomLyrics()
+    {
+        try
+        {
+            var result = await Http.GetFromJsonAsync<LyricsResult>("/api/lyrics/random");
+            if (result is not null)
+            {
+                _inputText = result.Lyrics ?? "";
+                _selectedSong = result.Title;
+            }
+        }
+        catch { _errorMessage = "Failed to load random lyrics."; }
+    }
+
+    private async Task TranslateAsync()
+    {
+        _isTranslating = true;
+        _errorMessage = "";
+        _translatedText = "";
+        _translationTimeMs = 0;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/translation", new { Text = _inputText });
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<TranslationResult>();
+                _translatedText = result?.TranslatedText ?? "";
+                _translationTimeMs = result?.DurationMs ?? 0;
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorMessage = $"Translation failed: {error}";
+            }
+        }
+        catch (Exception ex) { _errorMessage = $"Error: {ex.Message}"; }
+        finally { _isTranslating = false; }
+    }
+
+    private async Task SynthesizeSpeechAsync()
+    {
+        _isSynthesizing = true;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/speech/synthesize", new { Text = _translatedText });
+            if (response.IsSuccessStatusCode)
+            {
+                var audioBytes = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(audioBytes);
+                // Audio playback handled by JS interop would go here
+            }
+            else _errorMessage = "Speech synthesis failed.";
+        }
+        catch (Exception ex) { _errorMessage = $"Speech error: {ex.Message}"; }
+        finally { _isSynthesizing = false; }
+    }
+
+    private record TranslationResult(string TranslatedText, long DurationMs);
+    private record LyricsResult(string? Title, string? Lyrics);
+}

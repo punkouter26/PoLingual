@@ -1,0 +1,56 @@
+@page "/"
+@rendermode InteractiveWebAssembly
+
+<PageTitle>PoLingual — Voice App Playground</PageTitle>
+
+<div class="home-hero">
+    <div class="hero-content">
+        <h1 class="hero-title">🎤 PoLingual</h1>
+        <p class="hero-subtitle">Your Voice App Playground</p>
+        <p class="hero-description">Choose an experience below to get started</p>
+    </div>
+</div>
+
+<div class="app-selector">
+    <div class="app-card rap-card" @onclick='() => Navigation.NavigateTo("/rap-debate")'>
+        <div class="app-card-icon">🎙️</div>
+        <h2 class="app-card-title">Rap Battle Arena</h2>
+        <p class="app-card-desc">
+            Watch legendary rappers face off in AI-generated rap battles. Pick your rappers,
+            choose a topic from the latest news, and let the AI deliver fire bars with
+            real-time text-to-speech delivery.
+        </p>
+        <div class="app-card-features">
+            <span class="feature-tag">Azure OpenAI</span>
+            <span class="feature-tag">Speech Synthesis</span>
+            <span class="feature-tag">SignalR Streaming</span>
+            <span class="feature-tag">AI Judging</span>
+        </div>
+        <RadzenButton Text="Enter Arena" Icon="mic" ButtonStyle="ButtonStyle.Light" class="app-card-btn" />
+    </div>
+
+    <div class="app-card victorian-card" @onclick='() => Navigation.NavigateTo("/victorian-translator")'>
+        <div class="app-card-icon">🎩</div>
+        <h2 class="app-card-title">Victorian Translator</h2>
+        <p class="app-card-desc">
+            Transform modern English into elegant Victorian-era prose. Load Cockney rhyming
+            slang lyrics, type your own text, or generate random content — then hear it
+            spoken aloud in a proper British accent.
+        </p>
+        <div class="app-card-features">
+            <span class="feature-tag">AI Translation</span>
+            <span class="feature-tag">Lyrics Library</span>
+            <span class="feature-tag">British TTS</span>
+            <span class="feature-tag">Caching</span>
+        </div>
+        <RadzenButton Text="Start Translating" Icon="translate" ButtonStyle="ButtonStyle.Light" class="app-card-btn" />
+    </div>
+</div>
+
+<div class="home-footer-links">
+    <RadzenLink Path="/diag" Text="🔧 Diagnostics" Style="color: #aaa; margin: 0 1rem;" />
+</div>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+}

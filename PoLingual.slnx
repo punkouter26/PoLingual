@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PoLingual.Shared/PoLingual.Shared.csproj" />
+    <Project Path="src/PoLingual.Web.Client/PoLingual.Web.Client.csproj" />
+    <Project Path="src/PoLingual.Web/PoLingual.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PoLingual.IntegrationTests/PoLingual.IntegrationTests.csproj" />
+    <Project Path="tests/PoLingual.UnitTests/PoLingual.UnitTests.csproj" />
+  </Folder>
+</Solution>

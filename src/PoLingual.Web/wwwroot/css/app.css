@@ -1,0 +1,355 @@
+html,
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #0f0f1a;
+    color: #e0e0e0;
+}
+
+/* ===== HOME PAGE ===== */
+.home-hero {
+    text-align: center;
+    padding: 3rem 1rem 1.5rem;
+}
+
+.hero-title {
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #7c4dff, #ff4081);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+}
+
+.hero-subtitle {
+    font-size: 1.3rem;
+    color: #b0b0c0;
+    margin: 0.5rem 0 0;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.hero-description {
+    color: #888;
+    margin-top: 0.5rem;
+    font-size: 1rem;
+}
+
+/* App selector cards */
+.app-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+}
+
+.app-card {
+    border-radius: 16px;
+    padding: 2.5rem;
+    cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.app-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    border-radius: 16px;
+}
+
+.app-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, .4);
+}
+
+.app-card:hover::before {
+    opacity: 1;
+}
+
+.rap-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d1b3d 100%);
+    border: 1px solid rgba(229, 57, 53, 0.3);
+}
+
+.rap-card:hover {
+    border-color: rgba(229, 57, 53, 0.6);
+}
+
+.rap-card::before {
+    background: linear-gradient(135deg, rgba(229, 57, 53, 0.05) 0%, rgba(156, 39, 176, 0.05) 100%);
+}
+
+.victorian-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #1b2d3d 100%);
+    border: 1px solid rgba(121, 134, 203, 0.3);
+}
+
+.victorian-card:hover {
+    border-color: rgba(121, 134, 203, 0.6);
+}
+
+.victorian-card::before {
+    background: linear-gradient(135deg, rgba(121, 134, 203, 0.05) 0%, rgba(79, 195, 247, 0.05) 100%);
+}
+
+.app-card-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.app-card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.75rem;
+}
+
+.app-card-desc {
+    color: #a0a0b8;
+    line-height: 1.6;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.app-card-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.5rem;
+}
+
+.feature-tag {
+    background: rgba(255, 255, 255, 0.08);
+    color: #c0c0d0;
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.app-card-btn {
+    pointer-events: none;
+}
+
+.home-footer-links {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+/* ===== SHARED APP PAGE STYLES ===== */
+.rap-page,
+.victorian-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.rap-header,
+.victorian-header {
+    padding: 1rem 0 1.5rem;
+}
+
+.rap-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ff5252;
+    margin: 0.5rem 0 0;
+}
+
+.victorian-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #7986cb;
+    margin: 0.5rem 0 0;
+}
+
+/* Setup / cards */
+.setup-card,
+.leaderboard-card {
+    margin-bottom: 1.5rem;
+}
+
+/* ===== RAP BATTLE ARENA ===== */
+.battle-arena {
+    margin-top: 1rem;
+}
+
+.battle-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #1a1a2e, #2d1b3d);
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+.rapper-name {
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.rapper1-name {
+    color: #ff5252;
+}
+
+.rapper2-name {
+    color: #448aff;
+}
+
+.vs-badge {
+    background: #e53935;
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+.battle-topic {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    margin-bottom: 1rem;
+}
+
+.generating-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    color: #b0b0c0;
+    font-style: italic;
+}
+
+.battle-transcript {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.debate-turn {
+    padding: 1.25rem;
+    border-radius: 12px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.rapper1-turn {
+    background: rgba(229, 57, 53, 0.08);
+    border-left: 4px solid #ff5252;
+}
+
+.rapper2-turn {
+    background: rgba(68, 138, 255, 0.08);
+    border-left: 4px solid #448aff;
+}
+
+.turn-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.turn-header strong {
+    font-size: 1rem;
+}
+
+.rapper1-turn .turn-header strong {
+    color: #ff5252;
+}
+
+.rapper2-turn .turn-header strong {
+    color: #448aff;
+}
+
+.turn-number {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.turn-text {
+    white-space: pre-wrap;
+    line-height: 1.7;
+    color: #d0d0d8;
+}
+
+/* Judge card */
+.judge-card {
+    margin-top: 1.5rem;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 12px;
+}
+
+.score-card {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.score-card h6 {
+    margin: 0 0 0.5rem;
+    color: #fff;
+}
+
+.score-item {
+    font-size: 0.9rem;
+    color: #b0b0c0;
+    padding: 0.15rem 0;
+}
+
+.score-total {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 1rem;
+    color: #ffd740;
+}
+
+/* ===== VICTORIAN TRANSLATOR ===== */
+.victorian-page .rz-card {
+    max-width: 900px;
+}
+
+/* ===== SHARED ANIMATION ===== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .app-selector {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-title {
+        font-size: 2.2rem;
+    }
+
+    .battle-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
